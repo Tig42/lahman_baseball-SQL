@@ -1,0 +1,229 @@
+--#1
+
+SELECT min(yearid),max(yearid)
+FROM  pitching 
+WHERE yearid >= 1871 and yearid <2017
+	
+
+---#2 
+SELECT CONCAT(namefirst, ' ', namelast) as name,
+	p.playerid,
+	namegiven,
+	height as height_in_inches,
+	SUM(a.g_all) as games_played, 
+	t.name as team_name
+FROM people as p
+LEFT JOIN appearances as a
+ON p.playerid = a.playerid
+LEFT JOIN teams as t
+ON a.teamid = t.teamid AND a.yearid = t.yearid
+GROUP BY p.playerid, namegiven, CONCAT(namefirst, ' ', namelast), height, team_name
+ORDER BY height_in_inches
+LIMIT 2;
+
+--#3
+select s.schoolname,c.schoolid,p.namefirst,p.namelast,sr.salary
+from schools as s
+full join collegeplaying as c
+on s.schoolid=c.schoolid
+full join people as p
+on c.playerid = p.playerid
+full join salaries as sr
+on p.playerid=sr.playerid
+where schoolname ='Vanderbilt University'
+
+
+--4
+select yearid as year, pos,
+    case when pos='OF' THEN 'outfield'
+	     when pos='SS' THEN 'infield'
+		 when pos='1B' THEN 'infield'
+		 when pos='2B' THEN 'infield'
+		 WHEN pos='3B' THEN 'infield'
+		 when pos= 'P' or pos= 'C' THEN 'Battery' END AS players_groups
+from fielding
+where yearid=2016
+
+--- 4 different way to do 
+SELECT CASE WHEN pos = 'OF' THEN 'Outfield'
+	WHEN pos IN ('P','C') THEN 'Battery'
+	ELSE 'Infield' END as Position,
+	SUM(po) as Putouts
+FROM fielding
+WHERE yearid = 2016
+GROUP BY Position
+
+
+
+--#5
+SELECT CASE WHEN yearid BETWEEN 1920 AND 1929 THEN '1920s'
+		WHEN yearid BETWEEN 1930 AND 1939 THEN '1930s'
+		WHEN yearid BETWEEN 1940 AND 1949 THEN '1940s'
+		WHEN yearid BETWEEN 1950 AND 1959 THEN '1950s'
+		WHEN yearid BETWEEN 1960 AND 1969 THEN '1960s'
+		WHEN yearid BETWEEN 1970 AND 1979 THEN '1970s'
+		WHEN yearid BETWEEN 1980 AND 1989 THEN '1980s'
+		WHEN yearid BETWEEN 1990 AND 1999 THEN '1990s'
+		WHEN yearid BETWEEN 2000 AND 2009 THEN '2000s'
+		WHEN yearid > 2010 THEN '2010s' END AS Decade,
+		ROUND(SUM(so)::decimal/(SUM(g)/2),2) as avg_ko_per_game,
+		ROUND(SUM(hr)::decimal/(SUM(g)/2),2) as homeruns_per_game		
+FROM teams
+GROUP BY Decade
+ORDER BY Decade
+white_check_mark
+eyes
+raised_hands
+
+
+
+-
+
+--#6 final answer 
+Question 6
+SELECT CONCAT(p.namefirst , ' ' , p.namelast) as full_name,
+		round(sum(sb)::decimal/(sum(sb)+sum(cs)),2) as steal_percentage
+		--max(sb)as max_stealing_bases
+FROM batting as b inner join people as p
+    on b.playerid=p.playerid
+where yearid=2016
+--group by p.namefirst,p.namelast
+group by CONCAT(p.namefirst , ' ' , p.namelast)
+HAVING sum(sb)+sum(cs)>=20
+ORDER BY steal_percentage DESC
+LIMIT 1;
+
+
+
+--7a
+select t.teamid,p.yearid,WSWin,max(p.w)as max_win
+from pitching as p
+join teams as t
+on p.yearid = t.yearid
+where p.yearid between 1970 and 2016  and WSWin='N'
+group by t.teamid,p.yearid,WSWin
+order by max_win DESC
+7b
+select yearid,WSWin,min(p.w)as min_win
+from pitching as p
+join teams as t
+on p.yearid = t.yearid
+where p.yearid between 1970 and 2016  and WSWin='Y'
+group by WSwin
+
+
+-- 7 final answer 
+
+question 7,  parts 1 and 2
+/* 7.  From 1970 – 2016, what is the largest number of wins for a team that did not win the world series?
+2001 Seattle Mariners had 116 wins. */
+select yearid, name, max(w)
+from teams
+where yearid between 1970 and 2016 and wswin = 'N'
+group by yearid, name
+order by max desc;
+-- or
+select max(w)
+from teams
+where yearid between 1970 and 2016 and wswin = 'N';
+/* What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. Then redo your query, excluding the problem year.
+1981 Los Angeles Dodgers had 63 wins.  The low number of wins was due to a players' strike, which lasted from June 12 to July 31, and split the season into two halves. */
+select yearid, name, min(w)
+from teams
+--where yearid between 1970 and 2016 and wswin = 'Y'  -- <<< includes 1981 strike season
+where yearid between 1970 and 2016 and yearid not in (1981) and wswin = 'Y'  -- <<< excludes 1981 strike season
+group by yearid, name
+order by min;
+-- or
+select min(w)
+from teams
+where yearid between 1970 and 2016 and wswin = 'Y';
+----7 # c 
+with winning_teams as (select yearid, max(w) as max_w
+					from teams
+					where yearid between 1970 and 2016
+					and yearid <> 1981
+					group by yearid
+				  	order by yearid)
+select sum(case when wswin = 'Y' then 1 else 0 end) as count_max_is_champ,
+		avg(case when wswin = 'Y' then 1 else 0 end) as percent_max_is_champ
+from winning_teams as wt
+inner join teams as t
+on wt.yearid = t.yearid and wt.max_w = t.w
+
+
+--#8
+select team,park,round(avg(attendance/games),2) as avg_attendance_per_game
+from homegames
+where year=2016 and games>=10
+group by team,park
+order by avg(attendance/games) ASC
+LIMIT 5
+--- final answer for number 8
+SELECT distinct h.team, h.attendance, h.games, sum (h.attendance)/sum (h.games) AS Avg_attendance_per_game, p.park_name, name as team_name
+FROM homegames as h INNER JOIN parks as p USING (park)
+					INNER JOIN teams as t ON t.teamid = h.team and h.year = t.yearid			
+WHERE year= '2016' and h.games > 10
+GROUP BY h.attendance, h.team,  h.games, p.park_name, h.year, name
+ORDER BY Avg_attendance_per_game desc
+LIMIT 5;
+
+---9
+
+WITH NL_award as (SELECT playerid, awardid, lgid
+				  FROM AwardsManagers
+				  WHERE awardid = 'TSN Manager of the Year' and lgid = 'NL')
+SELECT distinct a.playerid, p.namefirst, p.namelast, a.awardid, t.name, a.lgid, NL.lgid
+FROM NL_award as NL
+INNER JOIN AwardsManagers as a using (playerid)
+INNER JOIN people as p using (playerid)
+INNER JOIN managers as m using (playerid)
+INNER JOIN teams as t
+	on t.teamid = m.teamid and t.lgid = m.lgid and t.yearid = m.yearid and
+		t.lgid = a.lgid and t.yearid = a.yearid
+WHERE a.lgid = 'AL' and a.awardid = 'TSN Manager of the Year'
+
+
+--10
+
+select playerid,yearid as year,lgid,max(hr)as highest_homeruns
+from batting 
+where yearid=2016 
+group by playerid,yearid,lgid
+order by highest_homeruns DESC 
+
+--final answer for 10
+SELECT p.namefirst, p.namelast, b.hr, round (sum ((finalgame::date - debut::date)::dec/365),1) as longevity, yearid
+FROM batting as b INNER JOIN people as p USING (playerid)
+WHERE yearid = '2016' and hr > 1
+GROUP BY b.hr, namefirst, namelast, yearid
+HAVING round (sum ((finalgame::date - debut::date)::dec/365),1) > 10
+ORDER BY hr desc;
+
+
+--open_ended question
+--6 Open-ended questions
+--6.	Is there any correlation between number of wins and team salary
+
+select t.teamid,s.lgid,name, t.yearid,count(t.W)as number_win, s.salary
+from salaries as s right join teams as t
+on s.yearid= t.yearid
+where s.yearid>=2000
+group by t.yearid,s.salary,t.teamid,name,s.lgid
+order by s.salary,number_win DESC
+
+---7a
+select t.lgid,t.teamid,h.attendance,t.W as win
+from teams as t 
+   join homegames as h
+   on t.attendance=h.attendance
+  order by win DESC
+--7b.
+select t.teamid,h.attendance,t.yearid,t.WSWin
+from teams as t 
+   join homegames as h
+   on t.attendance=h.attendance
+   where t.WSWin='Y'
+   group by t.teamid,h.attendance,t.yearid,t.WSWin,h.year
+   order by year 
+ -
