@@ -8,7 +8,7 @@ FROM teams;
 -- b.	How many games did he play in? 
 -- c.	What is the name of the team for which he played?
 
-SELECT distinct p.playerid, p.namegiven, min (p.height) as shortest_player, a.g_all as all_games_played, t.name as Team_name
+SELECT distinct p.playerid, p.namegiven, min (p.height) as height, a.g_all as games_played, t.name as Team_name
 FROM people as p INNER JOIN appearances as a ON p.playerid = a.playerid 
 		INNER JOIN teams as t ON t.teamid = a.teamid
 GROUP BY p.playerid, p.namegiven, a.g_all, t.name
@@ -25,7 +25,7 @@ LIMIT 1;
 
 
 
-SELECT p.namefirst, namelast, schoolname, sum (sal.salary) as total_salary
+SELECT p.namefirst, namelast, schoolname, sum (sal.salary::int::money) as total_salary
 FROM Schools as s INNER JOIN collegeplaying as cp using (schoolid) 
 				  INNER JOIN people as p ON p.playerid = cp.playerid
 				  INNER JOIN salaries as sal ON sal.playerid = p.playerid
@@ -237,28 +237,35 @@ ORDER BY s.yearid;
 
 
 
--- SELECT *
--- FROM teams
+-- 12.	In this question, you will explore the connection between number of wins and attendance
+-- Does there appear to be any correlation between attendance at home games and number of wins?
+-- Do teams that win the world series see a boost in attendance the following year? 
+-- What about teams that made the playoffs? Making the playoffs means either being a division winner or a wild card winner.
 
 
--- SELECT *
--- FROM salaries
+SELECT  max (w), max (attendance), ROUND (avg(w::integer),0) as avg_wins, ROUND (avg (attendance::integer),0) as avg_attendance, min (w), min (attendance)
+FROM Teams
+WHERE attendance IS NOT NULL
+
+
+
+
 
 
 -- 13	It is thought that since left-handed pitchers are more rare, causing batters to face them less often, that they are more effective. Investigate this claim and present evidence to either support or dispute this claim. 
 
 -- First, determine just how rare left-handed pitchers are compared with right-handed pitchers.
 
-SELECT ROUND ((AVG (case WHEN throws = 'L' then 1 ELSE 0 end)*100),2) as avg_lefthand_players, ROUND ((AVG (case WHEN throws = 'R' then 1 ELSE 0 end)*100),2) as avg_Righthand_players
+SELECT ROUND ((AVG (case WHEN throws = 'L' then 1 ELSE 0 end)*100),2) as Percentage_lefthand_players, ROUND ((AVG (case WHEN throws = 'R' then 1 ELSE 0 end)*100),2) as percentage_Righthand_players
 FROM people
 WHERE throws IS NOT NULL;
 
 
--- Are left-handed pitchers more likely to win the Cy Young Award? Are they more likely to make it into the hall of fame?
+-- Are left-handed pitchers more likely to win the Cy Young Award?
 
-SELECT awardid, ROUND (AVG (CASE WHEN throws = 'L' THEN 1 ELSE 0 END)*100,2) AS AVG_lefthand_pitcher, 
-	   ROUND (AVG (CASE WHEN throws = 'R' THEN 1 ELSE 0 END)*100,2) AS AVG_righthand_pitcher, MIN (ap.yearid) as min_year, MAX 		   (ap.yearid), MAX (ap.yearid) - MIN (ap.yearid) AS Years_diff
-FROM awardsshareplayers AS ap INNER JOIN people AS p USING (playerid)
+SELECT awardid, ROUND (AVG (CASE WHEN throws = 'L' THEN 1 ELSE 0 END)*100,2) AS Percent_lefthand_pitcher, 
+	   ROUND (AVG (CASE WHEN throws = 'R' THEN 1 ELSE 0 END)*100,2) AS percent_righthand_pitcher
+FROM awardsplayers AS ap INNER JOIN people AS p USING (playerid)
 WHERE awardid ILIKE '%Young%'
 GROUP BY awardid;
 
@@ -267,11 +274,9 @@ GROUP BY awardid;
 
 SELECT distinct inducted,ROUND(AVG (CASE WHEN throws = 'L' THEN 1 ELSE 0 END)*100,2)AS lefthand_inductee, ROUND (AVG (CASE WHEN throws = 'R' THEN 1 ELSE 0 END)*100,2) AS righthand_inductee
 FROM people AS p INNER JOIN halloffame as H ON h.playerid = p.playerid
-WHERE THROWS IS NOT NULL 
-GROUP BY inducted
-
-
-
+WHERE THROWS IS NOT NULL and inducted = 'Y'
+GROUP BY inducted 
+ORDER BY inducted desc;
 
 
 
